@@ -1,0 +1,7 @@
+# ignore build artifacts
+bin/
+build/
+*.o
+
+# ignore hidden source files
+.*.*
