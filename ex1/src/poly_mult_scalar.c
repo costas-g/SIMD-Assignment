@@ -3,9 +3,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "poly_mult_serial.h"
+#include "poly_mult_scalar.h"
 
-void poly_mult_serial(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
+void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
     struct timespec start, finish;
     double time_spent;
 
