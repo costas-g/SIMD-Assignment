@@ -5,9 +5,7 @@
 #include <string.h> /* Required for strerror */
 #include <errno.h>  /* Required for errno */
 
-/* Helper macro to round up to multiple of 8 */
-#define ROUND_UP_8(n) (((n) + 7) & ~7)
-
+#include "util.h"
 #include "poly_util.h"
 #include "poly_random_fill.h"
 #include "poly_mult_scalar.h"
@@ -15,17 +13,7 @@
 
 #define MAX_COEFF 1
 
-/* Helper macro for checking pointer after malloc */
-#define CHECK_MALLOC(ptr) \
-    if ((ptr) == NULL) { \
-        fprintf(stderr, "Fatal Error at %s:%d: %s\n", __FILE__, __LINE__, strerror(errno)); \
-        exit(EXIT_FAILURE); \
-    }
-
-/* declare helper functions */
-double time_diff(struct timespec *start, struct timespec *finish);
 void Usage(char* prog_name, const long long * const degree_input);
-
 
 int main(int argc, char* argv[]) {
     size_t deg_a;   /* Input A polynomial degree */
@@ -165,20 +153,6 @@ int main(int argc, char* argv[]) {
 
     return 0;
 } /* main */
-
-
-
-/*--------------------------------------------------------------------
- * Function:  time_diff
- * Purpose:   Returns the elapsed time between the start and the finish
- *            in seconds (with nanosecond accuracy).
- */
-double time_diff(struct timespec *start, struct timespec *finish) {
-    double time_elapsed = (finish->tv_sec - start->tv_sec) + (finish->tv_nsec - start->tv_nsec) / 1e9; 
-    return time_elapsed;
-} /* time_diff*/
-
-
 
 /*--------------------------------------------------------------------
  * Function:  Usage
