@@ -5,7 +5,6 @@
 #include <string.h> /* Required for strerror */
 #include <errno.h>  /* Required for errno */
 
-#include <immintrin.h> /* The header for all SIMD intrinsics */
 /* Helper macro to round up to multiple of 8 */
 #define ROUND_UP_8(n) (((n) + 7) & ~7)
 
@@ -13,6 +12,8 @@
 #include "poly_random_fill.h"
 #include "poly_mult_serial.h"
 #include "poly_mult_avx2.h"
+#include "poly_add_serial.h"
+#include "poly_add_avx2.h"
 
 /* Helper macro for checking pointer after malloc */
 #define CHECK_MALLOC(ptr) \
@@ -56,17 +57,36 @@ int main(int argc, char* argv[]) {
     /* polynomial pointers */
     int *poly_a          = NULL;    /* input polynomial */
     int *poly_b          = NULL;    /* input polynomial */
-    int *poly_res_serial = NULL;    /* resultant polynomial from serial */
-    int *poly_res_simd   = NULL;    /* resultant polynomial from SIMD */
+    int *poly_c_serial   = NULL;    /* resultant polynomial serial add */
+    int *poly_c_avx2     = NULL;    /* resultant polynomial avx2 add */
+    int *poly_res_serial = NULL;    /* resultant polynomial from serial mult */
+    int *poly_res_avx2   = NULL;    /* resultant polynomial from avx2 mult */
 
     /* ---------------- Allocate memory buffers ---------------- */
+    /* Allign */
+    size_t size_a   = ROUND_UP_8(deg_a   + 1    ); /* number of elements of poly_a */
+    size_t size_b   = ROUND_UP_8(deg_b   + 1    ); /* number of elements of poly_b */
+    size_t size_c   = ROUND_UP_8(deg_res + 1    ); /* number of elements of poly_c_serial */
+    size_t size_res = ROUND_UP_8(deg_res + 1 + 8); /* number of elements of poly_res */
+
+    size_t sizeof_a   = size_a   * sizeof(int); /* size in bytes of poly_a */
+    size_t sizeof_b   = size_b   * sizeof(int); /* size in bytes of poly_b */
+    size_t sizeof_c   = size_c   * sizeof(int); /* size in bytes of poly_c_serial */
+    size_t sizeof_res = size_res * sizeof(int); /* size in bytes of poly_res */
+
     /* for the input polynomials */
-    poly_a = malloc((deg_a + 1) * sizeof(int)); CHECK_MALLOC(poly_a);
-    poly_b = malloc((deg_b + 1) * sizeof(int)); CHECK_MALLOC(poly_b);
+    // poly_a = malloc((deg_a + 1) * sizeof(int)); CHECK_MALLOC(poly_a);
+    // poly_b = malloc((deg_b + 1) * sizeof(int)); CHECK_MALLOC(poly_b);
+    poly_a = (int*)aligned_alloc(32, sizeof_a); CHECK_MALLOC(poly_a);
+    poly_b = (int*)aligned_alloc(32, sizeof_b); CHECK_MALLOC(poly_b);
+    poly_c_serial = (int*)aligned_alloc(32, sizeof_c); CHECK_MALLOC(poly_c_serial);
+    poly_c_avx2   = (int*)aligned_alloc(32, sizeof_c); CHECK_MALLOC(poly_c_avx2  );
 
     /* for the serial and simd results */
-    poly_res_serial = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_serial);
-    poly_res_simd   = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_simd  );
+    // poly_res_serial = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_serial);
+    // poly_res_avx2   = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_avx2  );
+    poly_res_serial = (int*)aligned_alloc(32, sizeof_res); CHECK_MALLOC(poly_res_serial);
+    poly_res_avx2   = (int*)aligned_alloc(32, sizeof_res); CHECK_MALLOC(poly_res_avx2  );
     
 
     /* =========================== Generate the two polynomials =========================== */
@@ -91,27 +111,29 @@ int main(int argc, char* argv[]) {
     printf("\nSerial Poly Multiplication...\n");
 
     /* Compute Serial */
-    poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
+    // poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
+    poly_add_serial(poly_a, poly_b, poly_c_serial, size_a, &serial_time);
 
     /* Print execution time */
     printf("  Serial poly mult execution time (s): %9.6f\n", serial_time);
 
     #ifdef DEBUG
-    print_poly(poly_a, deg_a);
-    print_poly(poly_b, deg_b);
-    print_poly(poly_res_serial, deg_res);
+    print_poly(poly_a, size_a);
+    print_poly(poly_b, size_b);
+    print_poly(poly_res_serial, size_res);
     #endif
 
 
-    /* ============================ SIMD Poly Multiplication ============================ */
+    /* ============================ AVX2 Poly Multiplication ============================ */
     printf("================================================");
     printf("\nSIMD Poly Multiplication\n");
     
     /* Compute SIMD */
-    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_simd, &simd_time);
+    // poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
+    poly_add_avx2(poly_a, poly_b, poly_c_avx2, size_a, &simd_time);
 
     /* Print execution time */
-    printf("  SIMD poly mult execution time   (s): %9.6f\n", simd_time);
+    printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
 
     /* ------------------ Speedup calculation ------------------ */
     printf("                            Speedup:   %9.3f", serial_time/simd_time);
@@ -119,19 +141,30 @@ int main(int argc, char* argv[]) {
     
     /* ------------------------- Confirm correctness ------------------------- */
     printf("================================================");
-    printf("\nComparing Serial & SIMD poly mult results...\n");
-    long long nerrors;
-    nerrors = poly_count_errors(poly_res_simd, poly_res_serial, deg_res);
+    printf("\nComparing Serial & AVX2 poly mult results...\n");
+    size_t nerrors;
+    nerrors = poly_count_errors(poly_c_avx2, poly_c_serial, deg_res);
     if (nerrors == 0) {
         printf("  Results match!\n");
     } else {
-        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
+        printf("  ERROR: Results mismatch! # of errors = %ld\n", nerrors);
     }
+
+    #ifdef DEBUG
+    print_poly(poly_a, size_a);
+    print_poly(poly_b, size_b);
+    print_poly(poly_c_serial, size_c);
+    print_poly(poly_c_avx2, size_c);
+    print_poly(poly_res_serial, size_res);
+    print_poly(poly_res_avx2, size_res);
+    #endif
     
 
     /* ==================================== Cleanup ==================================== */
     /* Free allocated memory */
-    free(poly_res_simd);
+    free(poly_c_avx2);
+    free(poly_c_serial);
+    free(poly_res_avx2);
     free(poly_res_serial);
     free(poly_a);
     free(poly_b);

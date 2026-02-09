@@ -8,7 +8,7 @@ BUILD_DIR = build
 
 # Compilation
 CC 		= gcc
-CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O3
+CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O3 -mavx2
 # -D_POSIX_C_SOURCE=200809L 
 
 # Commands

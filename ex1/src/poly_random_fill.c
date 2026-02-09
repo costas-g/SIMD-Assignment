@@ -14,7 +14,7 @@ void poly_random_fill(int * const poly_out, const size_t degree, int max_coeff) 
         }
         while (coeff == 0); /* coefficients should be non-zero integers */
 
-        poly_out[i] = coeff; /* assign value */
+        poly_out[i] = (int) coeff; /* assign value */
     }
 
     return;

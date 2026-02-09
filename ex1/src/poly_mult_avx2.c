@@ -3,23 +3,41 @@
 #include <string.h>
 #include <time.h>
 
+#include <immintrin.h> /* The header for all SIMD intrinsics */
+
 #include "poly_mult_avx2.h"
 
 void poly_mult_avx2(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
     struct timespec start, finish;
     double time_spent;
-
     /* Initialize output buffer to 0 */
-    memset(poly_res_out, 0, (deg_a + deg_b + 1) * sizeof(int));
+    memset(poly_res_out, 0, ROUND_UP_8(deg_a + deg_b + 1 + 8) * sizeof(int));
 
     /* Main compute loop */
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
     for (size_t i = 0; i <= deg_a; i++) {
-        const int poly_ai = poly_a_in[i];       /* load poly_a_in values once per inner loop       */
-        int * poly_res_ptr = poly_res_out + i;  /* compute result offset index once per inner loop */
+        const int poly_ai = poly_a_in[i];       /* scalar value */
+        int * poly_res_ptr = poly_res_out + i;  /* output offset */
 
-        for(size_t j = 0; j <= deg_b; j++) {
-            poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
+        /* broadcast scalar to AVX2 register */
+        __m256i a_vec = _mm256_set1_epi32(poly_ai);
+
+        /* process 8 elements at a time */
+        for(size_t j = 0; j <= deg_b; j += 8) {
+            /* load 8 elements from poly_b_in */
+            __m256i b_vec = _mm256_load_si256((__m256i*)&poly_b_in[j]);
+
+            /* multiply 8 ints */
+            __m256i prod_vec = _mm256_mullo_epi32(a_vec, b_vec);
+
+            /* load current result */
+            __m256i c_vec = _mm256_loadu_si256((__m256i*)&poly_res_ptr[j]);
+
+            /* accumulate */
+            c_vec = _mm256_add_epi32(c_vec, prod_vec);
+
+            /* store back */
+            _mm256_storeu_si256((__m256i*)&poly_res_ptr[j], c_vec);
         }
     }
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
