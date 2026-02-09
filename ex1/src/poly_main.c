@@ -111,8 +111,8 @@ int main(int argc, char* argv[]) {
     printf("\nSerial Poly Multiplication...\n");
 
     /* Compute Serial */
-    // poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
-    poly_add_serial(poly_a, poly_b, poly_c_serial, size_a, &serial_time);
+    poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
+    // poly_add_serial(poly_a, poly_b, poly_c_serial, size_a, &serial_time);
 
     /* Print execution time */
     printf("  Serial poly mult execution time (s): %9.6f\n", serial_time);
@@ -129,8 +129,8 @@ int main(int argc, char* argv[]) {
     printf("\nSIMD Poly Multiplication\n");
     
     /* Compute SIMD */
-    // poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
-    poly_add_avx2(poly_a, poly_b, poly_c_avx2, size_a, &simd_time);
+    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
+    // poly_add_avx2(poly_a, poly_b, poly_c_avx2, size_a, &simd_time);
 
     /* Print execution time */
     printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
