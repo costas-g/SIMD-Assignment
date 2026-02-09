@@ -5,12 +5,16 @@
 #include <string.h> /* Required for strerror */
 #include <errno.h>  /* Required for errno */
 
+#include <immintrin.h> /* The header for all SIMD intrinsics */
+/* Helper macro to round up to multiple of 8 */
+#define ROUND_UP_8(n) (((n) + 7) & ~7)
+
 #include "poly_util.h"
 #include "poly_random_fill.h"
 #include "poly_mult_serial.h"
-// #include "poly_mult_simd.h"
+#include "poly_mult_avx2.h"
 
-/* define helper macro for checking pointer after malloc */
+/* Helper macro for checking pointer after malloc */
 #define CHECK_MALLOC(ptr) \
     if ((ptr) == NULL) { \
         fprintf(stderr, "Fatal Error at %s:%d: %s\n", __FILE__, __LINE__, strerror(errno)); \
@@ -104,7 +108,7 @@ int main(int argc, char* argv[]) {
     printf("\nSIMD Poly Multiplication\n");
     
     /* Compute SIMD */
-    // poly_mult_simd(poly_a, deg_a, poly_b, deg_b, poly_res_simd, &simd_time);
+    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_simd, &simd_time);
 
     /* Print execution time */
     printf("  SIMD poly mult execution time   (s): %9.6f\n", simd_time);

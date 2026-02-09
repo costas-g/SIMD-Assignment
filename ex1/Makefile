@@ -8,7 +8,7 @@ BUILD_DIR = build
 
 # Compilation
 CC 		= gcc
-CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O2
+CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O3
 # -D_POSIX_C_SOURCE=200809L 
 
 # Commands
@@ -30,6 +30,9 @@ all: $(TARGET_EXEC)
 
 debug: CFLAGS += -DDEBUG
 debug: clean all
+
+avx2: CFLAGS += -mavx2
+avx2: clean all
 
 execs: $(EXECUTABLES)
 
