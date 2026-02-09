@@ -8,7 +8,7 @@ BUILD_DIR = build
 
 # Compilation
 CC 		= gcc
-CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O3 -mavx2
+CFLAGS 	= -g -Wall -Wextra -I$(INC_DIR) -O3
 # -D_POSIX_C_SOURCE=200809L 
 
 # Commands
@@ -48,6 +48,13 @@ $(BIN_DIR)/%: $(BUILD_DIR)/%.o | $(BIN_DIR)
 # Pattern rule for objects, built from their .c files
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# ------------------------ OVERWRITE FLAGS FOR SPECIFIC FILES ------------------------
+# Scalar function: no SIMD at all
+$(BUILD_DIR)/%_serial.o: #CFLAGS += -fno-tree-vectorize -mno-sse -mno-avx -mno-avx2
+# AVX2 version
+$(BUILD_DIR)/%_avx2.o: CFLAGS += -mavx2 -march=native
+# ------------------------------------------------------------------------------------
 
 # Create build directory if missing 
 $(BUILD_DIR):

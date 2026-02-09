@@ -12,8 +12,8 @@
 #include "poly_random_fill.h"
 #include "poly_mult_serial.h"
 #include "poly_mult_avx2.h"
-// #include "poly_add_serial.h"
-// #include "poly_add_avx2.h"
+
+#define MAX_COEFF 1
 
 /* Helper macro for checking pointer after malloc */
 #define CHECK_MALLOC(ptr) \
@@ -57,8 +57,6 @@ int main(int argc, char* argv[]) {
     /* polynomial pointers */
     int *poly_a          = NULL;    /* input polynomial */
     int *poly_b          = NULL;    /* input polynomial */
-    int *poly_c_serial   = NULL;    /* resultant polynomial serial add */
-    int *poly_c_avx2     = NULL;    /* resultant polynomial avx2 add */
     int *poly_res_serial = NULL;    /* resultant polynomial from serial mult */
     int *poly_res_avx2   = NULL;    /* resultant polynomial from avx2 mult */
 
@@ -66,28 +64,22 @@ int main(int argc, char* argv[]) {
     /* Allign */
     size_t size_a   = ROUND_UP_8(deg_a   + 1    ); /* number of elements of poly_a */
     size_t size_b   = ROUND_UP_8(deg_b   + 1    ); /* number of elements of poly_b */
-    size_t size_c   = ROUND_UP_8(deg_res + 1    ); /* number of elements of poly_c_serial */
     size_t size_res = ROUND_UP_8(deg_res + 1 + 8); /* number of elements of poly_res */
 
     size_t sizeof_a   = size_a   * sizeof(int); /* size in bytes of poly_a */
     size_t sizeof_b   = size_b   * sizeof(int); /* size in bytes of poly_b */
-    size_t sizeof_c   = size_c   * sizeof(int); /* size in bytes of poly_c_serial */
     size_t sizeof_res = size_res * sizeof(int); /* size in bytes of poly_res */
 
     /* for the input polynomials */
-    // poly_a = malloc((deg_a + 1) * sizeof(int)); CHECK_MALLOC(poly_a);
-    // poly_b = malloc((deg_b + 1) * sizeof(int)); CHECK_MALLOC(poly_b);
     poly_a = (int*)aligned_alloc(32, sizeof_a); CHECK_MALLOC(poly_a);
     poly_b = (int*)aligned_alloc(32, sizeof_b); CHECK_MALLOC(poly_b);
-    poly_c_serial = (int*)aligned_alloc(32, sizeof_c); CHECK_MALLOC(poly_c_serial);
-    poly_c_avx2   = (int*)aligned_alloc(32, sizeof_c); CHECK_MALLOC(poly_c_avx2  );
 
     /* for the serial and simd results */
-    // poly_res_serial = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_serial);
-    // poly_res_avx2   = calloc(deg_res + 1, sizeof(int)); CHECK_MALLOC(poly_res_avx2  );
     poly_res_serial = (int*)aligned_alloc(32, sizeof_res); CHECK_MALLOC(poly_res_serial);
     poly_res_avx2   = (int*)aligned_alloc(32, sizeof_res); CHECK_MALLOC(poly_res_avx2  );
-    
+    /* Initialize output buffers to 0 */
+    memset(poly_res_serial, 0, sizeof_res);
+    memset(poly_res_avx2  , 0, sizeof_res);
 
     /* =========================== Generate the two polynomials =========================== */
     printf("Multiplication of two %ld-degree polynomials.\n", deg_a);
@@ -95,7 +87,7 @@ int main(int argc, char* argv[]) {
     printf("\nGenerating Polynomials...\n");
     
     srand((unsigned int) time(NULL));   /* seed random generator */
-    int max_coeff = 10;                 /* maximum coefficient value (absolute value) */
+    int max_coeff = MAX_COEFF;          /* maximum coefficient value (absolute value) */
 
     /* Random fill input polynomials */
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
@@ -105,6 +97,14 @@ int main(int argc, char* argv[]) {
     gen_time = time_diff(&start, &finish); /* elapsed time */
     printf("  Polynomials random fill time    (s): %9.6f\n", gen_time);
     
+
+    /* =========================== Warm up Runs =========================== */
+    printf("================================================");
+    printf("\nWarm up runs...\n");
+    poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
+    printf("  Serial poly mult execution time (s): %9.6f\n", serial_time);
+    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
+    printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
     
     /* =========================== Serial Poly Multiplication =========================== */
     printf("================================================");
@@ -112,7 +112,6 @@ int main(int argc, char* argv[]) {
 
     /* Compute Serial */
     poly_mult_serial(poly_a, deg_a, poly_b, deg_b, poly_res_serial, &serial_time);
-    // poly_add_serial(poly_a, poly_b, poly_c_serial, size_a, &serial_time);
 
     /* Print execution time */
     printf("  Serial poly mult execution time (s): %9.6f\n", serial_time);
@@ -130,7 +129,6 @@ int main(int argc, char* argv[]) {
     
     /* Compute SIMD */
     poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
-    // poly_add_avx2(poly_a, poly_b, poly_c_avx2, size_a, &simd_time);
 
     /* Print execution time */
     printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
@@ -143,7 +141,7 @@ int main(int argc, char* argv[]) {
     printf("================================================");
     printf("\nComparing Serial & AVX2 poly mult results...\n");
     size_t nerrors;
-    nerrors = poly_count_errors(poly_c_avx2, poly_c_serial, deg_res);
+    nerrors = poly_count_errors(poly_res_avx2, poly_res_serial, deg_res);
     if (nerrors == 0) {
         printf("  Results match!\n");
     } else {
@@ -153,8 +151,6 @@ int main(int argc, char* argv[]) {
     #ifdef DEBUG
     print_poly(poly_a, size_a);
     print_poly(poly_b, size_b);
-    print_poly(poly_c_serial, size_c);
-    print_poly(poly_c_avx2, size_c);
     print_poly(poly_res_serial, size_res);
     print_poly(poly_res_avx2, size_res);
     #endif
@@ -162,8 +158,6 @@ int main(int argc, char* argv[]) {
 
     /* ==================================== Cleanup ==================================== */
     /* Free allocated memory */
-    free(poly_c_avx2);
-    free(poly_c_serial);
     free(poly_res_avx2);
     free(poly_res_serial);
     free(poly_a);
