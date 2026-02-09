@@ -12,8 +12,8 @@
 #include "poly_random_fill.h"
 #include "poly_mult_serial.h"
 #include "poly_mult_avx2.h"
-#include "poly_add_serial.h"
-#include "poly_add_avx2.h"
+// #include "poly_add_serial.h"
+// #include "poly_add_avx2.h"
 
 /* Helper macro for checking pointer after malloc */
 #define CHECK_MALLOC(ptr) \
