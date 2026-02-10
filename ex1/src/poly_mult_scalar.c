@@ -6,6 +6,8 @@
 #include "poly_mult_scalar.h"
 #include "util.h"
 
+const size_t BLOCK_SIZE = 512; // Adjust based on your L1/L2 cache size
+
 void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
     struct timespec start, finish;
     double time_spent;
@@ -21,12 +23,25 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
 
     /* Main compute loop */
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-    for (size_t i = 0; i < size_a; i++) {
-        const int poly_ai = poly_a_in[i];       /* load poly_a_in values once per inner loop       */
-        int * poly_res_ptr = poly_res_out + i;  /* compute result offset index once per inner loop */
+    // for (size_t i = 0; i < size_a; i++) {
+    //     const int poly_ai = poly_a_in[i];       /* load poly_a_in values once per inner loop       */
+    //     int * poly_res_ptr = poly_res_out + i;  /* compute result offset index once per inner loop */
 
-        for(size_t j = 0; j < size_b; j++) {
-            poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
+    //     for(size_t j = 0; j < size_b; j++) {
+    //         poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
+    //     }
+    // }
+    for (size_t jj = 0; jj < size_b; jj += BLOCK_SIZE) {
+        size_t j_limit = (jj + BLOCK_SIZE > size_b) ? size_b : jj + BLOCK_SIZE;
+
+        for (size_t i = 0; i < size_a; i++) {
+            const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
+            int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
+
+            // This inner loop now works on a "cache-friendly" chunk
+            for (size_t j = jj; j < j_limit; j++) {
+                poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
+            }
         }
     }
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
