@@ -11,7 +11,7 @@
 #include "poly_mult_scalar.h"
 #include "poly_mult_avx2.h"
 
-#define MAX_COEFF 1
+#define MAX_COEFF 10
 
 void Usage(char* prog_name, const long long * const degree_input);
 
