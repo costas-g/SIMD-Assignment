@@ -146,7 +146,8 @@ int main(int argc, char* argv[]) {
     } else {
         printf("  ERROR: Results mismatch! # of errors = %ld\n", nerrors);
     }
-    printf("\nvalid,deg,scalar_time,avx2_time\n");
+    printf("------------------------------------------------\n");
+    printf("valid,deg,scalar_time,avx2_time\n");
     printf("%d,%ld,%f,%f\n", nerrors == 0 ? 1: 0, deg_a, scalar_time, avx2_time);
 
     #ifdef DEBUG

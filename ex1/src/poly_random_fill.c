@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 
 void poly_random_fill(int * const poly_out, const size_t degree, int max_coeff) {
