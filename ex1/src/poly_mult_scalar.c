@@ -6,6 +6,8 @@
 #include "poly_mult_scalar.h"
 #include "util.h"
 
+const int TILED = 0;    // 0: untiled, 1: single-tiled, 2: double-tiled for loops
+
 const size_t BLOCK_I = 512; 
 const size_t BLOCK_J = 512;
 
@@ -24,27 +26,34 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
 
     /* Main compute loop */
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-    // for (size_t i = 0; i < size_a; i++) {
-    //     const int poly_ai = poly_a_in[i];       /* load poly_a_in values once per inner loop       */
-    //     int * poly_res_ptr = poly_res_out + i;  /* compute result offset index once per inner loop */
+    if(TILED == 0)
+    {
+        for (size_t i = 0; i < size_a; i++) {
+            const int poly_ai = poly_a_in[i];       /* load poly_a_in values once per inner loop       */
+            int * poly_res_ptr = poly_res_out + i;  /* compute result offset index once per inner loop */
 
-    //     for(size_t j = 0; j < size_b; j++) {
-    //         poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
-    //     }
-    // }
-    // for (size_t jj = 0; jj < size_b; jj += BLOCK_SIZE) {
-    //     size_t j_limit = (jj + BLOCK_SIZE > size_b) ? size_b : jj + BLOCK_SIZE;
+            for(size_t j = 0; j < size_b; j++) {
+                poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
+            }
+        }
+    }
+    if(TILED == 1)
+    {
+        for (size_t jj = 0; jj < size_b; jj += BLOCK_J) {
+            size_t j_end = (jj + BLOCK_J > size_b) ? size_b : jj + BLOCK_J;
 
-    //     for (size_t i = 0; i < size_a; i++) {
-    //         const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
-    //         int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
+            for (size_t i = 0; i < size_a; i++) {
+                const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
+                int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
 
-    //         // This inner loop now works on a "cache-friendly" chunk
-    //         for (size_t j = jj; j < j_limit; j++) {
-    //             poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
-    //         }
-    //     }
-    // }
+                // This inner loop now works on a "cache-friendly" chunk
+                for (size_t j = jj; j < j_end; j++) {
+                    poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
+                }
+            }
+        }
+    }
+    if(TILED == 2)
     // Outer Loop 1: Tile 'i' (Control access to A and Res)
     for (size_t ii = 0; ii < size_a; ii += BLOCK_I) {
         size_t i_end = (ii + BLOCK_I > size_a) ? size_a : ii + BLOCK_I;
