@@ -37,10 +37,11 @@ int main(int argc, char* argv[]) {
     /* ========================= Common variables ========================= */
     /* Timing variables */
     struct timespec start, finish;
-    // double elapsed_time;
     double gen_time;
+    double scalar_time_w = 0.;
+    double avx2_time_w   = 0.;
     double scalar_time = 0.;
-    double simd_time   = 0.;
+    double avx2_time   = 0.;
 
     /* polynomial pointers */
     int *poly_a          = NULL;    /* input polynomial */
@@ -86,23 +87,28 @@ int main(int argc, char* argv[]) {
     printf("  Polynomials random fill time    (s): %9.6f\n", gen_time);
     
 
-    /* =========================== Warm up Runs =========================== */
-    printf("================================================");
-    printf("\nWarm up runs...\n");
-    poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time);
-    printf("  Scalar poly mult execution time (s): %9.6f\n", scalar_time);
-    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
-    printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
+    // /* =========================== Warm up Runs =========================== */
+    // printf("================================================");
+    // printf("\nWarm up runs...\n");
+    // poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time);
+    // printf("  Scalar poly mult execution time (s): %9.6f\n", scalar_time);
+    // poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time);
+    // printf("  AVX2 poly mult execution time   (s): %9.6f\n", avx2_time);
     
     /* =========================== Scalar Poly Multiplication =========================== */
     printf("================================================");
     printf("\nScalar Poly Multiplication...\n");
 
     /* Compute Scalar */
+    poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time_w);
+    printf("     Scalar warm up run exec time (s): %9.6f\n", scalar_time_w);
     poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time);
 
     /* Print execution time */
-    printf("  Scalar poly mult execution time (s): %9.6f\n", scalar_time);
+    printf("     Scalar second run  exec time (s): %9.6f\n", scalar_time);
+
+    /* select minimum time */
+    scalar_time = get_min_double(scalar_time_w, scalar_time);
 
     #ifdef DEBUG
     print_poly(poly_a, size_a);
@@ -113,16 +119,21 @@ int main(int argc, char* argv[]) {
 
     /* ============================ AVX2 Poly Multiplication ============================ */
     printf("================================================");
-    printf("\nSIMD Poly Multiplication\n");
+    printf("\nAVX2 Poly Multiplication\n");
     
-    /* Compute SIMD */
-    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &simd_time);
+    /* Compute AVX2 */
+    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time_w);
+    printf("       AVX2 warm up run exec time (s): %9.6f\n", avx2_time_w);
+    poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time);
 
     /* Print execution time */
-    printf("  AVX2 poly mult execution time   (s): %9.6f\n", simd_time);
+    printf("       AVX2 second run  exec time (s): %9.6f\n", avx2_time);
+
+    /* select minimum time */
+    avx2_time = get_min_double(avx2_time_w, avx2_time);
 
     /* ------------------ Speedup calculation ------------------ */
-    printf("                            Speedup:   %9.3f", scalar_time/simd_time);
+    printf("                            Speedup:   %9.3f", scalar_time/avx2_time);
     printf("\n");
     
     /* ------------------------- Confirm correctness ------------------------- */
@@ -135,6 +146,8 @@ int main(int argc, char* argv[]) {
     } else {
         printf("  ERROR: Results mismatch! # of errors = %ld\n", nerrors);
     }
+    printf("\nvalid,deg,scalar_time,avx2_time\n");
+    printf("%d,%ld,%f,%f\n", nerrors == 0 ? 1: 0, deg_a, scalar_time, avx2_time);
 
     #ifdef DEBUG
     print_poly(poly_a, size_a);
