@@ -4,4 +4,4 @@ build/
 *.o
 
 # ignore hidden source files
-.*.*
+.*
