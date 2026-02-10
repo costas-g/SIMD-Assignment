@@ -1,0 +1,147 @@
+#include <stdio.h>
+#include <immintrin.h>
+
+void print_arr(int * arr, int size);
+
+int main() {
+    int a[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int b[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int tmp[8];
+    int res[8] = {0,0,0,0,0,0,0,0};
+    print_arr(a, 8);
+
+    const size_t BI = 4;  // block size for a
+    const size_t BJ = 4;  // block size for b
+
+    /* CODE for ITERATION of BLOCKS ii and jj */
+    size_t ii;
+    size_t jj;
+
+    ii = 0;
+    jj = 0;
+
+    /* if (jj & 7) == 0, i.e. jj multiple of 8, then load aligned */
+    // Load 8 elements of b - but we only use 4 each time
+    __m256i b_vec = _mm256_load_si256((__m256i*)(b + jj));
+    /* else [if (jj & 7) != 0 and (jj & 3) == 0], i.e. jj multiple of 4 but not of 8, then swap halves */
+    /* for the next jj+1 block of b, just swap halves. Save a load. */
+    b_vec = _mm256_permute2x128_si256(b_vec, b_vec, 0x01); // swap lower and upper halfs
+
+
+    // Prepare accumulators
+    __m256i acc0 = _mm256_setzero_si256();
+    __m256i prev_res; // will be loaded from memory
+
+    // Process 4 elements of a
+    for (size_t i = 0; i < BI; i++) {
+        // Broadcast a[ii + i] to all 8 lanes
+        __m256i a_broadcast = _mm256_set1_epi32(a[ii + i]);
+
+        // Multiply
+        __m256i prod = _mm256_mullo_epi32(a_broadcast, b_vec);
+
+        // Discard upper half and shift accordingly
+        __m256i prod_shifted = _mm256_permute2x128_si256(prod, prod, 0x80); // zero upper half;
+        if (i > 0) {
+            // Shift left by i ints across the whole ymm using permutes
+            __m256i shifted = prod_shifted;//_mm256_permute2x128_si256(prod, prod, 0x08); // zero upper half
+            // shifted = _mm256_slli_si256(shifted, i * 4);                   // shift left within lower half
+            switch (i) { // need to unroll
+            case 0:
+                shifted = _mm256_slli_si256(prod, 0);
+                break;
+            case 1:
+                shifted = _mm256_slli_si256(prod, 4);
+                break;
+            case 2:
+                shifted = _mm256_slli_si256(prod, 8);
+                break;
+            case 3:
+                shifted = _mm256_slli_si256(prod, 12);
+                break;
+            }
+            // __m128i upper_from_lower = _mm_srli_si128(_mm256_castsi256_si128(prod), (4 - i) * 4);
+            __m128i upper_from_lower;
+            switch (i) { // need to unroll
+            case 0:
+                // shift by (4-0)*4 = 16 bytes → entire register becomes zero
+                upper_from_lower = _mm_srli_si128(_mm256_castsi256_si128(prod), 16);
+                break;
+            case 1:
+                // shift by (4-1)*4 = 12 bytes
+                upper_from_lower = _mm_srli_si128(_mm256_castsi256_si128(prod), 12);
+                break;
+            case 2:
+                // shift by (4-2)*4 = 8 bytes
+                upper_from_lower = _mm_srli_si128(_mm256_castsi256_si128(prod), 8);
+                break;
+            case 3:
+                // shift by (4-3)*4 = 4 bytes
+                upper_from_lower = _mm_srli_si128(_mm256_castsi256_si128(prod), 4);
+                break;
+            }
+            shifted = _mm256_inserti128_si256(shifted, upper_from_lower, 1); // fill upper half
+            prod_shifted = shifted;
+        }
+
+        // // Shift prod left by i ints (4 bytes each) within 128-bit halves
+        // // __m256i prod_shift = _mm256_slli_si256(prod, i * 4);
+        
+        // // Handle crossing 128-bit boundary
+        // if (i > 0) {
+        //     // extract lower 128-bit half
+        //     __m128i lower = _mm256_castsi256_si128(prod);
+        //     // extract the int that crosses boundary
+        //     // __m128i carry = _mm_srli_si128(lower, (4 - i) * 4);  // (4-i) ints to get correct element
+        //     __m128i carry;
+        //     switch (i) {
+        //     case 0:
+        //         // shift by (4-0)*4 = 16 bytes → entire register becomes zero
+        //         carry = _mm_srli_si128(lower, 16);
+        //         break;
+        //     case 1:
+        //         // shift by (4-1)*4 = 12 bytes
+        //         carry = _mm_srli_si128(lower, 12);
+        //         break;
+        //     case 2:
+        //         // shift by (4-2)*4 = 8 bytes
+        //         carry = _mm_srli_si128(lower, 8);
+        //         break;
+        //     case 3:
+        //         // shift by (4-3)*4 = 4 bytes
+        //         carry = _mm_srli_si128(lower, 4);
+        //         break;
+        //     }
+        //     // insert into upper half
+        //     prod_shift = _mm256_inserti128_si256(prod_shift, carry, 1);
+        // }
+        
+        // DEBUG: print prod_shifted
+        _mm256_storeu_si256((__m256i*)tmp, prod_shifted);
+        print_arr(tmp, 8); 
+
+        // Accumulate
+        acc0 = _mm256_add_epi32(acc0, prod_shifted);
+    }
+
+    /* When ii+jj is a multiple of 8 (50% of the time) then the loads and stores are 32-byte aligned */
+    /* when ((ii+jj) & 7) == 0 */
+
+    // Load current result from memory
+    prev_res = _mm256_loadu_si256((__m256i*)(res + ii + jj));
+    // Add the new partial result
+    acc0 = _mm256_add_epi32(acc0, prev_res);
+    // Write back result
+    _mm256_storeu_si256((__m256i*)(res + ii + jj), acc0);
+    print_arr(res, 8); 
+
+    return 0;
+}
+
+void print_arr(int * arr, int size) {
+    for (int i = 0; i < size; i++) {
+        printf("%2d,", arr[i]);
+    }
+    fflush(stdout);
+    puts("");
+}
