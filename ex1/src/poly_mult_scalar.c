@@ -6,7 +6,8 @@
 #include "poly_mult_scalar.h"
 #include "util.h"
 
-const size_t BLOCK_SIZE = 512; // Adjust based on your L1/L2 cache size
+const size_t BLOCK_I = 512; 
+const size_t BLOCK_J = 512;
 
 void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
     struct timespec start, finish;
@@ -31,17 +32,38 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
     //         poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply */
     //     }
     // }
-    for (size_t jj = 0; jj < size_b; jj += BLOCK_SIZE) {
-        size_t j_limit = (jj + BLOCK_SIZE > size_b) ? size_b : jj + BLOCK_SIZE;
+    // for (size_t jj = 0; jj < size_b; jj += BLOCK_SIZE) {
+    //     size_t j_limit = (jj + BLOCK_SIZE > size_b) ? size_b : jj + BLOCK_SIZE;
 
-        for (size_t i = 0; i < size_a; i++) {
-            const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
-            int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
+    //     for (size_t i = 0; i < size_a; i++) {
+    //         const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
+    //         int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
 
-            // This inner loop now works on a "cache-friendly" chunk
-            for (size_t j = jj; j < j_limit; j++) {
-                poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
+    //         // This inner loop now works on a "cache-friendly" chunk
+    //         for (size_t j = jj; j < j_limit; j++) {
+    //             poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
+    //         }
+    //     }
+    // }
+    // Outer Loop 1: Tile 'i' (Control access to A and Res)
+    for (size_t ii = 0; ii < size_a; ii += BLOCK_I) {
+        size_t i_end = (ii + BLOCK_I > size_a) ? size_a : ii + BLOCK_I;
+
+        // Outer Loop 2: Tile 'j' (Control access to B)
+        for (size_t jj = 0; jj < size_b; jj += BLOCK_J) {
+            size_t j_end = (jj + BLOCK_J > size_b) ? size_b : jj + BLOCK_J;
+
+            // --- Core Computation (Fits entirely in L1) ---
+            for (size_t i = ii; i < i_end; i++) {
+                const int poly_ai = poly_a_in[i];               // Loaded from L1
+                int * restrict poly_res_ptr = poly_res_out + i; // Offset calculated once
+
+                // Inner loop vectorizes easily
+                for (size_t j = jj; j < j_end; j++) {
+                    poly_res_ptr[j] += poly_ai * poly_b_in[j]; // poly_b_in[j] in L1, poly_res_out[i+j] in L1
+                }
             }
+            // ----------------------------------------------
         }
     }
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
