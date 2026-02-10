@@ -51,7 +51,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 
 # ------------------------ OVERWRITE FLAGS FOR SPECIFIC FILES ------------------------
 # Scalar function: no SIMD at all
-$(BUILD_DIR)/%_serial.o: #CFLAGS += -fno-tree-vectorize -mno-sse -mno-avx -mno-avx2
+$(BUILD_DIR)/%_scalar.o: #CFLAGS += -fno-tree-vectorize -mno-sse -mno-avx -mno-avx2
 # AVX2 version
 $(BUILD_DIR)/%_avx2.o: CFLAGS += -mavx2 -march=native
 # ------------------------------------------------------------------------------------

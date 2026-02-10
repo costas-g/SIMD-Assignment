@@ -83,7 +83,7 @@ int main(int argc, char* argv[]) {
         poly_random_fill(poly_a, deg_a, max_coeff);
         poly_random_fill(poly_b, deg_b, max_coeff);
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
-    gen_time = time_diff(&start, &finish); /* elapsed time */
+    gen_time = time_delta(&start, &finish); /* elapsed time */
     printf("  Polynomials random fill time    (s): %9.6f\n", gen_time);
     
 

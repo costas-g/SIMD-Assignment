@@ -82,7 +82,7 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
     #endif
 
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
-    time_spent = time_diff(&start, &finish);
+    time_spent = time_delta(&start, &finish);
 
     if (time_out != NULL) *time_out = time_spent;
 

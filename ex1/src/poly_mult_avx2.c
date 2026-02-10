@@ -52,7 +52,7 @@ void poly_mult_avx2(const int * restrict poly_a_in, size_t deg_a, const int * re
         }
     }
     clock_gettime(CLOCK_MONOTONIC, &finish); /* finish time */
-    time_spent = time_diff(&start, &finish);
+    time_spent = time_delta(&start, &finish);
 
     if (time_out != NULL) *time_out = time_spent;
 

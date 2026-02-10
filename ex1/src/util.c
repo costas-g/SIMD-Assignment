@@ -1,14 +1,14 @@
 #include <time.h>
 
 /*--------------------------------------------------------------------
- * Function:  time_diff
+ * Function:  time_delta
  * Purpose:   Returns the elapsed time between the start and the finish
  *            in seconds (with nanosecond accuracy).
  */
-double time_diff(struct timespec *start, struct timespec *finish) {
+double time_delta(struct timespec *start, struct timespec *finish) {
     double time_elapsed = (finish->tv_sec - start->tv_sec) + (finish->tv_nsec - start->tv_nsec) / 1e9; 
     return time_elapsed;
-} /* time_diff*/
+} /* time_delta*/
 
 
 /*--------------------------------------------------------------------

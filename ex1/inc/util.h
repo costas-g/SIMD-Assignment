@@ -15,7 +15,7 @@
     }
 
 
-double time_diff(struct timespec *start, struct timespec *finish);
+double time_delta(struct timespec *start, struct timespec *finish);
 double get_min_double(double val_a, double val_b);
 
 
