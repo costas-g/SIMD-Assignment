@@ -7,12 +7,12 @@
 #include "util.h"
 
 /* Only define one of these */
-#define NO_TILED    // no tiled: use simple untiled inner and outer loops
+// #define NO_TILED    // no tiled: use simple untiled inner and outer loops
 // #define S_TILED     // single-tiled: tile only inner loop in blocks
-// #define D_TILED     // double-tiled: tile both inner and outer loops in blocks
+#define D_TILED     // double-tiled: tile both inner and outer loops in blocks
 
-#define BLOCK_I 512
-#define BLOCK_J 512
+#define BLOCK_I 4096
+#define BLOCK_J 4096
 
 void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * restrict poly_b_in, size_t deg_b, int * restrict poly_res_out, double * time_out) {
     struct timespec start, finish;
