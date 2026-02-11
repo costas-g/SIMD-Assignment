@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 """
 Benchmark driver for the polynomial multiplication experiments.
-
-Usage:
-    py runs.py           # run experiments, build stats, write stats CSV
+Runs experiments and writes the raw results to a runs .csv file.
 """
 import os
 import re
 import subprocess
-import numpy as np
 import pandas as pd
 import argparse
 from datetime import datetime
@@ -21,15 +18,15 @@ EXE_PATH = os.path.join(BIN_DIR, "main")
 data_root = os.path.join(ROOT, "data")
 os.makedirs(data_root, exist_ok=True)
 
-runs_root = os.path.join(data_root, "runs")
-os.makedirs(runs_root, exist_ok=True)
+runs_dir = os.path.join(data_root, "runs")
+os.makedirs(runs_dir, exist_ok=True)
 
 # Generate the timestamp string
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 # Construct the unique filename
 filename = f"simd_runs_{timestamp}.csv"
 # FINAL output CSV (stats) adjust name 
-STATS_CSV = os.path.join(runs_root, filename)
+STATS_CSV = os.path.join(runs_dir, filename)
 
 parser = argparse.ArgumentParser(description="Run polynomial multiplication (serial vs parallel)")
 parser.add_argument("-s", "--skip-experiments", action="store_true",
