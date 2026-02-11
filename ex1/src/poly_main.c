@@ -43,6 +43,8 @@ int main(int argc, char* argv[]) {
     double scalar_time = 0.;
     double avx2_time   = 0.;
 
+    int warmup_enable = deg_a > 100000 ? 0 : 1;
+
     /* polynomial pointers */
     int *poly_a          = NULL;    /* input polynomial */
     int *poly_b          = NULL;    /* input polynomial */
@@ -100,15 +102,18 @@ int main(int argc, char* argv[]) {
     printf("\nScalar Poly Multiplication...\n");
 
     /* Compute Scalar */
+    if (warmup_enable) 
+    {
     poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time_w);
     printf("     Scalar warm up run exec time (s): %9.6f\n", scalar_time_w);
+    }
     poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time);
 
     /* Print execution time */
     printf("     Scalar second run  exec time (s): %9.6f\n", scalar_time);
 
     /* select minimum time */
-    scalar_time = get_min_double(scalar_time_w, scalar_time);
+    if (warmup_enable) scalar_time = get_min_double(scalar_time_w, scalar_time);
 
     #ifdef DEBUG
     print_poly(poly_a, size_a);
@@ -122,15 +127,18 @@ int main(int argc, char* argv[]) {
     printf("\nAVX2 Poly Multiplication\n");
     
     /* Compute AVX2 */
+    if (warmup_enable) 
+    {
     poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time_w);
     printf("       AVX2 warm up run exec time (s): %9.6f\n", avx2_time_w);
+    }
     poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time);
 
     /* Print execution time */
     printf("       AVX2 second run  exec time (s): %9.6f\n", avx2_time);
 
     /* select minimum time */
-    avx2_time = get_min_double(avx2_time_w, avx2_time);
+    if (warmup_enable) avx2_time = get_min_double(avx2_time_w, avx2_time);
 
     /* ------------------ Speedup calculation ------------------ */
     printf("                            Speedup:   %9.3f", scalar_time/avx2_time);
