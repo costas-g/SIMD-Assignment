@@ -31,25 +31,26 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
 
     #ifdef D_TILED
-    // Outer Loop 1: Tile 'i' (Control access to A and Res)
+    /* Outer loop: tile i (control access to poly_a and poly_res) */
     for (size_t ii = 0; ii < size_a; ii += BLOCK_I) {
         size_t i_end = (ii + BLOCK_I > size_a) ? size_a : ii + BLOCK_I;
 
-        // Outer Loop 2: Tile 'j' (Control access to B)
+        /* Inner loop: tile j (control access to poly_b) */
         for (size_t jj = 0; jj < size_b; jj += BLOCK_J) {
             size_t j_end = (jj + BLOCK_J > size_b) ? size_b : jj + BLOCK_J;
 
-            // --- Core Computation (Fits entirely in L1) ---
-            for (size_t i = ii; i < i_end; i++) {
-                const int poly_ai = poly_a_in[i];               // Loaded from L1
-                int * restrict poly_res_ptr = poly_res_out + i; // Offset calculated once
+            /* Core computation (should fit entirely in L1 cache for appropiate block sizes) */
 
-                // Inner loop vectorizes easily
+            /* Outer loop for the current block */
+            for (size_t i = ii; i < i_end; i++) {
+                const int poly_ai = poly_a_in[i];               /* load poly_a_in value from L1 once */
+                int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once */
+
+                /* Inner loop for the current block */
                 for (size_t j = jj; j < j_end; j++) {
-                    poly_res_ptr[j] += poly_ai * poly_b_in[j]; // poly_b_in[j] in L1, poly_res_out[i+j] in L1
+                    poly_res_ptr[j] += poly_ai * poly_b_in[j]; /* multiply -- poly_b_in[j] and poly_res_out[i+j] in L1 */
                 }
             }
-            // ----------------------------------------------
         }
     }
     #elif defined(S_TILED)
@@ -60,7 +61,7 @@ void poly_mult_scalar(const int * restrict poly_a_in, size_t deg_a, const int * 
             const int poly_ai = poly_a_in[i];               /* load poly_a_in values once per inner loop       */
             int * restrict poly_res_ptr = poly_res_out + i; /* compute result offset index once per inner loop */
 
-            // This inner loop now works on a "cache-friendly" chunk
+            /* inner loop now works on a cache-friendly chunk */
             for (size_t j = jj; j < j_end; j++) {
                 poly_res_ptr[j] += poly_ai * poly_b_in[j];  /* multiply */
             }
