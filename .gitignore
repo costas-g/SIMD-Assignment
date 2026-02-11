@@ -3,5 +3,10 @@ bin/
 build/
 *.o
 
-# ignore hidden source files
-.*
+# ignore hidden files
+.*/
+.*.*
+
+# ignore stats files except for the raw runs results
+data/
+!data/runs/
