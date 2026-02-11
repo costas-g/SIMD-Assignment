@@ -11,7 +11,8 @@
 #include "poly_mult_scalar.h"
 #include "poly_mult_avx2.h"
 
-#define MAX_COEFF 10
+#define MAX_COEFF 10    /* maximum value of the coefficients */
+#define MAX_PRINT 30    /* maximum number of elements to print */
 
 void Usage(char* prog_name, const long long * const degree_input);
 
@@ -43,6 +44,7 @@ int main(int argc, char* argv[]) {
     double scalar_time = 0.;
     double avx2_time   = 0.;
 
+    /* Disable warmup run if degree is greater than 100K */
     int warmup_enable = deg_a > 100000 ? 0 : 1;
 
     /* polynomial pointers */
@@ -53,13 +55,13 @@ int main(int argc, char* argv[]) {
 
     /* ---------------- Allocate memory buffers ---------------- */
     /* Allign */
-    size_t size_a   = ROUND_UP_8(deg_a   + 1    ); /* number of elements of poly_a */
-    size_t size_b   = ROUND_UP_8(deg_b   + 1    ); /* number of elements of poly_b */
-    size_t size_res = ROUND_UP_8(deg_res + 1 + 8); /* number of elements of poly_res */
+    size_t size_a   = ROUND_UP_8(deg_a   + 1    );  /* number of elements of poly_a */
+    size_t size_b   = ROUND_UP_8(deg_b   + 1    );  /* number of elements of poly_b */
+    size_t size_res = ROUND_UP_8(deg_res + 1 + 8);  /* number of elements of poly_res */
 
-    size_t sizeof_a   = size_a   * sizeof(int); /* size in bytes of poly_a */
-    size_t sizeof_b   = size_b   * sizeof(int); /* size in bytes of poly_b */
-    size_t sizeof_res = size_res * sizeof(int); /* size in bytes of poly_res */
+    size_t sizeof_a   = size_a   * sizeof(int);     /* size in bytes of poly_a */
+    size_t sizeof_b   = size_b   * sizeof(int);     /* size in bytes of poly_b */
+    size_t sizeof_res = size_res * sizeof(int);     /* size in bytes of poly_res */
 
     /* for the input polynomials */
     poly_a = (int*)aligned_alloc(32, sizeof_a); CHECK_MALLOC(poly_a);
@@ -71,6 +73,7 @@ int main(int argc, char* argv[]) {
     /* Initialize output buffers to 0 */
     memset(poly_res_scalar, 0, sizeof_res);
     memset(poly_res_avx2  , 0, sizeof_res);
+
 
     /* =========================== Generate the two polynomials =========================== */
     printf("Multiplication of two %ld-degree polynomials.\n", deg_a);
@@ -88,14 +91,6 @@ int main(int argc, char* argv[]) {
     gen_time = time_delta(&start, &finish); /* elapsed time */
     printf("  Polynomials random fill time    (s): %9.6f\n", gen_time);
     
-
-    // /* =========================== Warm up Runs =========================== */
-    // printf("================================================");
-    // printf("\nWarm up runs...\n");
-    // poly_mult_scalar(poly_a, deg_a, poly_b, deg_b, poly_res_scalar, &scalar_time);
-    // printf("  Scalar poly mult execution time (s): %9.6f\n", scalar_time);
-    // poly_mult_avx2(poly_a, deg_a, poly_b, deg_b, poly_res_avx2, &avx2_time);
-    // printf("  AVX2 poly mult execution time   (s): %9.6f\n", avx2_time);
     
     /* =========================== Scalar Poly Multiplication =========================== */
     printf("================================================");
@@ -116,9 +111,11 @@ int main(int argc, char* argv[]) {
     if (warmup_enable) scalar_time = get_min_double(scalar_time_w, scalar_time);
 
     #ifdef DEBUG
-    print_poly(poly_a, size_a);
-    print_poly(poly_b, size_b);
-    print_poly(poly_res_scalar, size_res);
+    if (size_res <= MAX_PRINT) {
+        print_poly(poly_a, size_a);
+        print_poly(poly_b, size_b);
+        print_poly(poly_res_scalar, size_res);
+    }
     #endif
 
 
@@ -154,15 +151,19 @@ int main(int argc, char* argv[]) {
     } else {
         printf("  ERROR: Results mismatch! # of errors = %ld\n", nerrors);
     }
+
+    /* ---------------------------- Print CSV line ---------------------------- */
     printf("------------------------------------------------\n");
     printf("valid,deg,scalar_time,avx2_time\n");
     printf("%d,%ld,%f,%f\n", nerrors == 0 ? 1: 0, deg_a, scalar_time, avx2_time);
 
     #ifdef DEBUG
-    print_poly(poly_a, size_a);
-    print_poly(poly_b, size_b);
-    print_poly(poly_res_scalar, size_res);
-    print_poly(poly_res_avx2, size_res);
+    if (size_res <= MAX_PRINT) {
+        print_poly(poly_a, size_a);
+        print_poly(poly_b, size_b);
+        print_poly(poly_res_scalar, size_res);
+        print_poly(poly_res_avx2, size_res);
+    }
     #endif
     
 
