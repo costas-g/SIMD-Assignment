@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#define POS_COEFFS
+// #define POS_COEFFS
 
 void poly_random_fill(int * const poly_out, const size_t degree, int max_coeff) {
     /* compute final max coefficient */

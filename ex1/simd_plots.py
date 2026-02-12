@@ -50,10 +50,10 @@ def plot_times_v_deg(df: pd.DataFrame, out_path: str):
     # --- Min and Mean (dashed) Values ---
     # Using the same colors to group Scalar vs AVX2, but different style
     # Scalar
-    h1, = ax.plot(x, df["scalar_time_min"].values, "s-", markersize=8, label="Scalar Minimum time", color="tab:blue")
+    h1, = ax.plot(x, df["scalar_time_min"].values, "s-", markersize=8, label="Scalar Minimum Time", color="tab:blue")
     h2  = ax.errorbar(x, df["scalar_time_mean"].values, yerr=df["scalar_time_std"].values, fmt="^:", markersize=8, capsize=8, label="Scalar Mean Time", color="tab:blue", alpha=0.7)
     # AVX2
-    h3, = ax.plot(x, df["avx2_time_min"].values, "s-", markersize=8, label="avx2 Minimum time", color="tab:orange")
+    h3, = ax.plot(x, df["avx2_time_min"].values, "s-", markersize=8, label="avx2 Minimum Time", color="tab:orange")
     h4  = ax.errorbar(x, df["avx2_time_mean"].values, yerr=df["avx2_time_std"].values, fmt="^:", markersize=8, capsize=8, label="avx2 Mean Time", color="tab:orange", alpha=0.7)
 
     # --- AXIS FORMATTING ---

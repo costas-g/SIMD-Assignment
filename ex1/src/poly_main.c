@@ -39,10 +39,10 @@ int main(int argc, char* argv[]) {
     /* Timing variables */
     struct timespec start, finish;
     double gen_time;
-    double scalar_time_w = 0.;
-    double avx2_time_w   = 0.;
-    double scalar_time = 0.;
-    double avx2_time   = 0.;
+    double scalar_time_w = 0.; /* scalar warm up run time */
+    double scalar_time   = 0.; /* scalar compute run time */
+    double avx2_time_w   = 0.; /* avx2   warm up run time */
+    double avx2_time     = 0.; /* avx2   compute run time */
 
     /* Disable warmup run if degree is greater than 100K */
     int warmup_enable = deg_a > 100000 ? 0 : 1;
