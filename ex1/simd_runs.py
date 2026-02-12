@@ -25,8 +25,8 @@ os.makedirs(runs_dir, exist_ok=True)
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 # Construct the unique filename
 filename = f"simd_runs_{timestamp}.csv"
-# FINAL output CSV (stats) adjust name 
-STATS_CSV = os.path.join(runs_dir, filename)
+# FINAL output CSV 
+RUNS_CSV = os.path.join(runs_dir, filename)
 
 parser = argparse.ArgumentParser(description="Run polynomial multiplication (serial vs parallel)")
 parser.add_argument("-s", "--skip-experiments", action="store_true",
@@ -36,11 +36,10 @@ parser.add_argument("--keep-raw", action="store_true",
 args = parser.parse_args()
 
 
-# DEGREE_VALUES = [10 ** p for p in range(3, 6)]  # 1e3..1e5
 MIN_EXP = 7  # 2**7  = 128
 MAX_EXP = 17 # 2**17 = 131072
-DEGREE_VALUES = [2 ** p - 1 for p in range(MIN_EXP, MAX_EXP+1)] # from 127 to 131071
-REPEATS = [min(30, 3 * 2**i) for i in range(len(DEGREE_VALUES))][::-1]
+DEGREE_VALUES = [2 ** p - 1 for p in range(MIN_EXP, MAX_EXP+1)]         # from 127 to 131071
+REPEATS = [min(30, 3 * 2**i) for i in range(len(DEGREE_VALUES))][::-1]  # 30 max repeats, down to 3 repeats at the slowest experiment
 
 # CVS Header line
 # HEADER_RE = re.compile(r"^valid,deg,scalar_time,avx2_time\s*$")
@@ -112,8 +111,8 @@ def do_runs_and_write_csv():
       run repeats -> compute stats -> append ONE row to STATS_CSV
     """
     # Fresh run: delete stats file if it exists
-    if os.path.exists(STATS_CSV):
-        os.remove(STATS_CSV)
+    if os.path.exists(RUNS_CSV):
+        os.remove(RUNS_CSV)
 
     file_exists = False
 
@@ -130,18 +129,18 @@ def do_runs_and_write_csv():
                 continue
 
             pd.DataFrame([row]).to_csv(
-                STATS_CSV,
+                RUNS_CSV,
                 mode="a",
                 header=not file_exists,
                 index=False
             )
 
             file_exists = True
-            print(f"|", end="", flush=True)
+            print(f"|", end="", flush=True) # show live progress
 
         print("") # newline
 
-    print(f"[INFO] Appended all run results -> {STATS_CSV}")
+    print(f"[INFO] Appended all run results -> {RUNS_CSV}")
 
 
 # ---------- MAIN ----------
@@ -149,20 +148,20 @@ def main():
     print(f"[INFO] Executable: {EXE_PATH}")
     print(f"[INFO] Degrees: {DEGREE_VALUES}")
     print(f"[INFO] REPEATS: {REPEATS}")
-    print(f"[INFO] Stats CSV: {STATS_CSV}")
+    print(f"[INFO] Stats CSV: {RUNS_CSV}")
 
     if args.skip_experiments:
-        if not os.path.exists(STATS_CSV):
-            raise FileNotFoundError(f"--skip-experiments but stats CSV not found: {STATS_CSV}")
-        stats_df = pd.read_csv(STATS_CSV)
-        print(f"[INFO] Loaded stats CSV (rows={len(stats_df)})")
+        if not os.path.exists(RUNS_CSV):
+            raise FileNotFoundError(f"--skip-experiments but stats CSV not found: {RUNS_CSV}")
+        runs_df = pd.read_csv(RUNS_CSV)
+        print(f"[INFO] Loaded stats CSV (rows={len(runs_df)})")
         return
 
     do_runs_and_write_csv()
 
-    stats_df = pd.read_csv(STATS_CSV)
-    print(f"[INFO] Done. Final stats rows: {len(stats_df)}")
-    # TODO: plots/tables using stats_df
+    runs_df = pd.read_csv(RUNS_CSV)
+    print(f"[INFO] Done. Final stats rows: {len(runs_df)}")
+    # TODO: stats/plots using runs_df
 
 if __name__ == "__main__":
     main()

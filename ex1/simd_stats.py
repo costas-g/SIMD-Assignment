@@ -67,11 +67,11 @@ def compute_stats(raw_df: pd.DataFrame) -> pd.DataFrame:
     #    This creates a hierarchical column index (MultiIndex)
     stats = df.groupby("degree")[["scalar_time", "avx2_time"]].agg(["min", "mean", "std"])
 
-    # 3. Flatten Columns: Convert ('scalar_time', 'min') -> 'scalar_time_min'
+    # 3. Flatten Columns: Convert ('scalar_time', 'min') to 'scalar_time_min'
     stats.columns = [f"{col}_{stat}" for col, stat in stats.columns]
     stats = stats.reset_index()
 
-    # 4. Compute Speedup (using the minimums, as requested)
+    # 4. Compute Speedup (using the minimums)
     #    Using numpy where to handle potential division by zero safely
     stats["speedup"] = np.where(
         stats["avx2_time_min"] > 0, 
@@ -115,14 +115,14 @@ def export_stats(stats_df: pd.DataFrame, input_csv_path: str, output_dir: str):
 
 
 def main():
-    # 1. Determine the csv_path
+    # Determine the csv_path
     if len(sys.argv) >= 2:
         runs_csv_path = sys.argv[1]
     else:
         print(f"[INFO] No runs file provided. Searching in: {os.path.relpath(runs_dir)}")
         runs_csv_path = get_latest_csv(runs_dir)
 
-    # 2. Validation
+    # Validation
     if not runs_csv_path or not os.path.exists(runs_csv_path):
         # specific check to avoid crashing if csv_path is None
         bad_path = os.path.relpath(runs_csv_path) if runs_csv_path else "None"
