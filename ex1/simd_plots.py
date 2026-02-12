@@ -51,10 +51,10 @@ def plot_times_v_deg(df: pd.DataFrame, out_path: str):
     # Using the same colors to group Scalar vs AVX2, but different style
     # Scalar
     h1, = ax.plot(x, df["scalar_time_min"].values, "s-", markersize=8, label="Scalar Minimum Time", color="tab:blue")
-    h2  = ax.errorbar(x, df["scalar_time_mean"].values, yerr=df["scalar_time_std"].values, fmt="^:", markersize=8, capsize=8, label="Scalar Mean Time", color="tab:blue", alpha=0.7)
+    h2  = ax.errorbar(x, df["scalar_time_mean"].values, yerr=df["scalar_time_std"].values, fmt="o:", markersize=3, capsize=8, label="Scalar Mean Time", color="tab:blue", alpha=0.7)
     # AVX2
     h3, = ax.plot(x, df["avx2_time_min"].values, "s-", markersize=8, label="avx2 Minimum Time", color="tab:orange")
-    h4  = ax.errorbar(x, df["avx2_time_mean"].values, yerr=df["avx2_time_std"].values, fmt="^:", markersize=8, capsize=8, label="avx2 Mean Time", color="tab:orange", alpha=0.7)
+    h4  = ax.errorbar(x, df["avx2_time_mean"].values, yerr=df["avx2_time_std"].values, fmt="o:", markersize=3, capsize=8, label="avx2 Mean Time", color="tab:orange", alpha=0.7)
 
     # --- AXIS FORMATTING ---
     ax.set_xlabel("Polynomial Degree")
@@ -124,6 +124,51 @@ def plot_speedup_v_deg(df: pd.DataFrame, out_path: str):
     plt.close(fig)
 
 
+def plot_growth_v_deg(df: pd.DataFrame, out_path: str):
+    x = df["degree"].values
+    scalar_times = df["scalar_time_min"].values
+    avx2_times = df["avx2_time_min"].values
+
+    scalar_growth = [scalar_times[i]/scalar_times[i-1] for i in range(1, len(scalar_times))]
+    avx2_growth = [avx2_times[i]/avx2_times[i-1] for i in range(1, len(avx2_times))]
+
+    fig, ax = plt.subplots()
+    # Scalar
+    h1, = ax.plot(x[1:], scalar_growth, "s-", markersize=8, label="Scalar Time Growth", color="tab:blue")
+    # AVX2
+    h2, = ax.plot(x[1:], avx2_growth, "s-", markersize=8, label="avx2 Time Growth", color="tab:orange")
+
+    # --- AXIS FORMATTING ---
+    ax.set_xlabel("Polynomial Degree")
+    ax.set_ylabel("Time Growth")
+    ax.set_title("Scalar and SIMD Time Growth vs. Polynomial Degree")
+
+    # Set Log Scale Base 2
+    ax.set_xscale("log", base=2)
+    # ax.set_yscale("log")
+
+    # Define ticks at exact powers of 2 (128, 256, 512, 1024...)
+    # We generate these based on the range of the data
+    low_pow = int(np.floor(np.log2(x.min() + 1)))
+    high_pow = int(np.ceil(np.log2(x.max() + 1)))
+    exact_powers = [2**i for i in range(low_pow, high_pow + 1)]
+    
+    # Set the ticks at the exact powers
+    ax.set_xticks(exact_powers)
+
+    # Apply Custom "K" Formatting
+    ax.get_xaxis().set_major_formatter(ticker.FuncFormatter(format_k))
+
+    # Grid and Legend
+    ax.grid(True, which="major", linestyle="-", alpha=0.8)
+    ax.grid(True, which="minor", linestyle=":", alpha=0.4)
+    ax.legend(handles=[h1, h2])
+
+    fig.tight_layout()
+    fig.savefig(out_path, format="svg", bbox_inches="tight")
+    plt.close(fig)
+
+
 def main():
     # Determine the stats csv_path
     if len(sys.argv) >= 2:
@@ -149,12 +194,15 @@ def main():
     base_name = raw_base.replace("stats", "plot")
     out1 = os.path.join(plots_dir, f"{base_name}_times.svg")
     out2 = os.path.join(plots_dir, f"{base_name}_speedup.svg")
+    out3 = os.path.join(plots_dir, f"{base_name}_growth.svg")
 
     plot_times_v_deg(stats_df, out1)
     plot_speedup_v_deg(stats_df, out2)
+    plot_growth_v_deg(stats_df, out3)
 
     print(f"[INFO] Saved: {os.path.relpath(out1)}")
     print(f"[INFO] Saved: {os.path.relpath(out2)}")
+    print(f"[INFO] Saved: {os.path.relpath(out3)}")
 
 
 if __name__ == "__main__":

@@ -95,8 +95,8 @@ def export_stats(stats_df: pd.DataFrame, input_csv_path: str, output_dir: str):
     base_name = os.path.splitext(os.path.basename(input_csv_path))[0]
     
     # If input is 'simd_results_2026...', this becomes 'simd_stats_2026...'
-    if "results" in base_name:
-        new_base = base_name.replace("results", "stats")
+    if "runs" in base_name:
+        new_base = base_name.replace("runs", "stats")
     else:
         # Fallback if input didn't follow the naming convention
         new_base = f"simd_stats_{base_name}"

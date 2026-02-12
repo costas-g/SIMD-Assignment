@@ -33,11 +33,14 @@ RUNS_CSV_PATH = os.path.join(runs_dir, filename)
 # parser.add_argument("--keep-raw", action="store_true", help="Keep the temporary raw CSV (otherwise it is deleted at the end).")
 # args = parser.parse_args()
 
+BASE        = 2
+MIN_EXP     = 7     # 2**7  = 128
+MAX_EXP     = 17    # 2**17 = 131072
+MIN_REPEATS = 3     # number of repeated runs at the slowest experiment
+MAX_REPEATS = 30    # max number of repeated runs
 
-MIN_EXP = 7  # 2**7  = 128
-MAX_EXP = 17 # 2**17 = 131072
-DEGREE_VALUES = [2 ** p - 1 for p in range(MIN_EXP, MAX_EXP+1)]         # from 127 to 131071
-REPEATS = [min(30, 3 * 2**i) for i in range(len(DEGREE_VALUES))][::-1]  # 30 max repeats, down to 3 repeats at the slowest experiment
+DEGREE_VALUES = [BASE ** p - 1 for p in range(MIN_EXP, MAX_EXP+1)]                                  # from 127 to 131071
+REPEATS = [min(MAX_REPEATS, MIN_REPEATS * (BASE*BASE)**i) for i in range(len(DEGREE_VALUES))][::-1] # 30 max repeats, down to 3 repeats at the slowest experiment
 
 # CVS Header line
 # HEADER_RE = re.compile(r"^valid,deg,scalar_time,avx2_time\s*$")
