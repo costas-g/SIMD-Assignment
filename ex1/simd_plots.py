@@ -6,6 +6,7 @@ Reads from the stats csv file and exports the relevant plots as svg files.
 import os
 import sys
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import glob
@@ -43,42 +44,43 @@ def format_k(x, pos):
 
 
 def plot_times_v_deg(df: pd.DataFrame, out_path: str):
-    x = df["degree"].values + 1
+    x = df["degree"].values
 
     fig, ax = plt.subplots()
-    # --- Min Values ---
-    # Using the same colors to group Scalar vs AVX, but different style
-    ax.plot(x, df["scalar_time_min"].values, "^-", label="Scalar min", color="tab:blue")
-    ax.plot(x, df["avx2_time_min"].values, "^-", label="AVX2 min", color="tab:orange")
-
-    # --- Mean Values (Dashed Lines) ---
-    # Note: Ensure these column names match your dataframe (e.g., 'scalar_time_mean' vs 'scalar_mean')
-    ax.errorbar(x, df["scalar_time_mean"].values, yerr=df["scalar_time_std"].values,
-                fmt="o--", capsize=3, label="Scalar mean", color="tab:blue", alpha=0.7)
-    ax.errorbar(x, df["avx2_time_mean"].values, yerr=df["avx2_time_std"].values,
-                fmt="o--", capsize=3, label="AVX2 mean", color="tab:orange", alpha=0.7)
+    # --- Min and Mean (dashed) Values ---
+    # Using the same colors to group Scalar vs AVX2, but different style
+    # Scalar
+    h1, = ax.plot(x, df["scalar_time_min"].values, "s-", markersize=8, label="Scalar Minimum time", color="tab:blue")
+    h2  = ax.errorbar(x, df["scalar_time_mean"].values, yerr=df["scalar_time_std"].values, fmt="^:", markersize=8, capsize=8, label="Scalar Mean Time", color="tab:blue", alpha=0.7)
+    # AVX2
+    h3, = ax.plot(x, df["avx2_time_min"].values, "s-", markersize=8, label="avx2 Minimum time", color="tab:orange")
+    h4  = ax.errorbar(x, df["avx2_time_mean"].values, yerr=df["avx2_time_std"].values, fmt="^:", markersize=8, capsize=8, label="avx2 Mean Time", color="tab:orange", alpha=0.7)
 
     # --- AXIS FORMATTING ---
-    ax.set_xlabel("Polynomial degree (N)")
-    ax.set_ylabel("Time (s)")
-    ax.set_title("Scalar vs AVX2 Runtime")
+    ax.set_xlabel("Polynomial Degree")
+    ax.set_ylabel("Compute Time (s)")
+    ax.set_title("Scalar and SIMD Compute Time vs. Polynomial Degree")
 
-    # 1. Set Log Scale Base 2
+    # Set Log Scale Base 2
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
 
-    # 2. Force Ticks at Every Data Point
-    #    This ensures 256, 512, 1024... all get a tick mark
-    ax.set_xticks(x)
+    # Define ticks at exact powers of 2 (128, 256, 512, 1024...)
+    # We generate these based on the range of the data
+    low_pow = int(np.floor(np.log2(x.min() + 1)))
+    high_pow = int(np.ceil(np.log2(x.max() + 1)))
+    exact_powers = [2**i for i in range(low_pow, high_pow + 1)]
+    
+    # Set the ticks at the exact powers
+    ax.set_xticks(exact_powers)
 
-    # 3. Apply Custom "K" Formatting
+    # Apply Custom "K" Formatting
     ax.get_xaxis().set_major_formatter(ticker.FuncFormatter(format_k))
 
     # Grid and Legend
-    # Grid and Legend
     ax.grid(True, which="major", linestyle="-", alpha=0.8)
     ax.grid(True, which="minor", linestyle=":", alpha=0.4)
-    ax.legend()
+    ax.legend(handles=[h1, h2, h3, h4])
 
     fig.tight_layout()
     fig.savefig(out_path, format="svg", bbox_inches="tight")
@@ -90,26 +92,47 @@ def plot_speedup_v_deg(df: pd.DataFrame, out_path: str):
     y = df["speedup"].values
 
     fig, ax = plt.subplots()
-    ax.plot(x, y, "o--")
-    ax.set_xlabel("Polynomial degree")
-    ax.set_ylabel("Speedup (scalar_min / avx2_min)")
-    ax.set_title("Speedup vs degree")
+    ax.plot(x, y, "s--", markersize=10, label="Speedup")
+
+    # --- AXIS FORMATTING ---
+    ax.set_xlabel("Polynomial Degree")
+    ax.set_ylabel("Speedup")
+    ax.set_title("SIMD Speedup vs. Polynomial Degree")
+
+    # Set Log Scale Base 2
     ax.set_xscale("log", base=2)
-    ax.grid(True, which="both", linestyle="--", alpha=0.6)
+
+    # Define ticks at exact powers of 2 (128, 256, 512, 1024...)
+    # We generate these based on the range of our data
+    low_pow = int(np.floor(np.log2(x.min() + 1)))
+    high_pow = int(np.ceil(np.log2(x.max() + 1)))
+    exact_powers = [2**i for i in range(low_pow, high_pow + 1)]
+    
+    # Set the ticks at the exact powers
+    ax.set_xticks(exact_powers)
+
+    # Apply Custom "K" Formatting
+    ax.get_xaxis().set_major_formatter(ticker.FuncFormatter(format_k))
+
+    # Grid and Legend
+    ax.grid(True, which="major", linestyle="-", alpha=0.8)
+    ax.grid(True, which="minor", linestyle=":", alpha=0.4)
+    ax.legend()
+
     fig.tight_layout()
     fig.savefig(out_path, format="svg", bbox_inches="tight")
     plt.close(fig)
 
 
 def main():
-    # 1. Determine the stats csv_path
+    # Determine the stats csv_path
     if len(sys.argv) >= 2:
         stats_csv_path = sys.argv[1]
     else:
         print(f"[INFO] No stats file provided. Searching in: {os.path.relpath(stats_dir)}")
         stats_csv_path = get_latest_csv(stats_dir)
 
-    # 2. Validation
+    # Validation
     if not stats_csv_path or not os.path.exists(stats_csv_path):
         # specific check to avoid crashing if csv_path is None
         bad_path = os.path.relpath(stats_csv_path) if stats_csv_path else "None"
