@@ -8,5 +8,5 @@ build/
 .*.*
 
 # ignore stats files except for the raw runs results
-data/
-!data/runs/
+# data/
+# !data/runs/
